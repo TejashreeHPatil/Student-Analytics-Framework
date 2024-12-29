@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semester Toppers Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-green-100 via-yellow-100 to-red-100 text-gray-800 font-sans">
+    <header class="bg-gradient-to-r from-green-500 to-blue-600 text-white py-4 px-6 shadow-xl flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-4xl font-bold text-center tracking-wider">📊 Semester Toppers Analysis</h1>
+        </div>
+        <a href="index.html">
+            <button class="bg-blue-500 text-white py-2 px-8 rounded-full shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transform transition duration-300 hover:scale-105">
+                Go to Homepage
+            </button>
+        </a>
+    </header>
+
+    <main class="container mx-auto p-6">
+        <div id="chartsContainer" class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto text-center">
+            <p class="text-sm">Designed with ❤️ using Chart.js and TailwindCSS</p>
+        </div>
+    </footer>
+
+    <script>
+        const chartsContainer = document.getElementById('chartsContainer');
+
+        const semesterData = [
+            {
+                semester: "1st Semester",
+                toppers: ["VIJAYALAXMI B", "SHRADHA GANAPATI VERNEKAR", "KAVYA P M", "SHREYA K S", "NAFEESA TAJ N", "K J VIJAYALAKSHMI", "SHIFANA", "SRUSHTI RAJESH GAONKAR", "TANUSHREE SHIVANAND CHAKRASALI", "SAHANA B M"],
+                marks: [700, 697, 677, 677, 674, 673, 664, 664, 664, 659],
+            },
+            {
+                semester: "2nd Semester",
+                toppers: ["Vijayalaxmi B", "Shradha G Vernekar", "Sahana B M", "Shifana", "Sejal M", "Sara Aiman", "TANUSHREE SHIVANAND CHAKRASALI", "Kavya PM", "Niriksha S", "Sindhu M"],
+                marks: [713, 704, 697, 695, 694, 688, 687, 684, 683, 679],
+            },
+            {
+                semester: "3rd Semester",
+                toppers: ["Vijayalaxmi B", "Shifana", "Sahana B M", "M Sindhu", "Nafeesa Taj N", "Sejal M", "Shreya K S", "Shradha G Vernekar", "K J Vijayalakshmi", "Srushti R Gaonkar"],
+                marks: [829, 822, 813, 810, 806, 805, 803, 803, 795, 793],
+            },
+            {
+                semester: "4th Semester",
+                toppers: ["Sejal M", "Shifana", "Vijayalaxmi B", "Shradha G Vernekar", "Srushti R Gaonkar", "Kavya PM", "M Sindhu", "Nafeesa Taj N", "K J Vijayalakshmi", "Sindhu M"],
+                marks: [811, 809, 808, 807, 805, 794, 792, 790, 782, 779],
+            },
+        ];
+
+        const renderCharts = (data) => {
+            data.forEach(({ semester, toppers, marks }, index) => {
+                const container = document.createElement('div');
+                container.className = "bg-white p-6 rounded shadow-lg border-2 border-yellow-200";
+                container.innerHTML = `
+                    <h2 class="text-lg font-semibold text-yellow-600 mb-4 text-center">${semester}</h2>
+                    <div class="chart-container">
+                        <canvas id="chartCanvas${index}"></canvas>
+                    </div>
+                `;
+                chartsContainer.appendChild(container);
+
+                const ctx = document.getElementById(`chartCanvas${index}`).getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: toppers,
+                        datasets: [
+                            {
+                                label: `Marks`,
+                                data: marks,
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)', 
+                                borderColor: 'rgba(255, 99, 132, 1)', 
+                                borderWidth: 2,
+                                tension: 0.4,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Toppers',
+                                    font: { weight: 'bold' },
+                                },
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Marks',
+                                    font: { weight: 'bold' },
+                                },
+                            },
+                        },
+                    },
+                });
+            });
+        };
+
+        renderCharts(semesterData);
+    </script>
+</body>
+</html>

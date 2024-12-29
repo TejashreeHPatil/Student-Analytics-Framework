@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Marks Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 text-gray-800 font-sans">
+    <header class="bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 px-6 shadow-xl  flex justify-between items-center">
+        <div class="flex items-center space-x-4">
+            <h1 class="text-4xl font-bold text-center tracking-wider">📊 Student Academic Analysis</h1>
+        </div>
+        <a href="toppers.html">
+            <button class="bg-blue-500 text-white py-2 px-8 rounded-full shadow-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transform transition duration-300 hover:scale-105">
+                Check the toppers
+            </button>
+        </a>
+    </header>
+
+    <main class="container mx-auto p-6">
+        <div class="mb-6 text-center">
+            <label for="studentSelector" class="text-xl font-medium mr-2">Select Student:</label>
+            <select id="studentSelector" class="w-64 p-3 border rounded shadow-sm focus:outline-none focus:ring-4 focus:ring-blue-300">
+            </select>
+        </div>
+
+        <div id="chartsContainer" class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+        </div>
+    </main>
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto text-center">
+            <p class="text-sm">Designed with ❤️ using Chart.js, TailwindCSS, and XLSX.js</p>
+        </div>
+    </footer>
+
+    <script>
+        const chartsContainer = document.getElementById('chartsContainer');
+        const studentSelector = document.getElementById('studentSelector');
+        let charts = [];
+
+        const fetchAndProcessData = async (fileName) => {
+            try {
+                const response = await fetch(fileName);
+                const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' });
+                return workbook.SheetNames.map(sheet =>
+                    XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1 })
+                );
+            } catch (error) {
+                console.error(`Error loading Excel file (${fileName}):`, error);
+                return [];
+            }
+        };
+
+        const extractStudents = (allData) => {
+            const students = {};
+            const subjectHeaders = allData.map(data => data[0].slice(2));
+            allData.forEach((data, index) => {
+                const [headers, ...rows] = data;
+                rows.forEach(([name, usn, ...marks]) => {
+                    if (!students[usn]) students[usn] = { name, marks: [], subjects: subjectHeaders };
+                    students[usn].marks[index] = marks;
+                });
+            });
+            return students;
+        };
+
+        const extractSGPAData = (data) => {
+            const [headers, ...rows] = data[0];
+            const sgpaStudents = {};
+            rows.forEach(([name, usn, ...sgpaData]) => {
+                sgpaStudents[usn] = { name, sgpaData, labels: headers.slice(2) };
+            });
+            return sgpaStudents;
+        };
+
+        const populateSelector = (students) => {
+            studentSelector.innerHTML = Object.entries(students)
+                .map(([usn, { name }]) => `<option value="${usn}">${name} (${usn})</option>`)
+                .join('');
+        };
+
+        const renderSGPAChart = (sgpaData, labels, name) => {
+            const container = document.createElement('div');
+            container.className = "col-span-2 bg-white p-6 rounded shadow-lg border-2 border-blue-200";
+            container.innerHTML = ` 
+                <h2 class="text-lg font-semibold text-blue-600 mb-4 text-center">SGPA Trend</h2>
+                <div class="chart-container">
+                    <canvas id="sgpaChartCanvas"></canvas>
+                </div>
+            `;
+            chartsContainer.prepend(container);
+
+            const ctx = document.getElementById('sgpaChartCanvas').getContext('2d');
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: `SGPA`,
+                            data: sgpaData,
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Semesters',
+                                font: { weight: 'bold' },
+                            },
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'SGPA',
+                                font: { weight: 'bold' },
+                            },
+                        },
+                    },
+                },
+            });
+
+            charts.push(chart);
+        };
+
+        const renderCharts = (marks, subjects, name) => {
+            marks.forEach((semesterMarks, semester) => {
+                const container = document.createElement('div');
+                container.className = "bg-white p-6 rounded shadow-lg border-2 border-purple-200";
+                container.innerHTML = `
+                    <h2 class="text-lg font-semibold text-purple-600 mb-4 text-center">Semester ${semester + 1}</h2>
+                    <div class="chart-container">
+                        <canvas id="chartCanvas${semester}"></canvas>
+                    </div>
+                `;
+                chartsContainer.appendChild(container);
+
+                const ctx = document.getElementById(`chartCanvas${semester}`).getContext('2d');
+                const chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: subjects[semester],
+                        datasets: [
+                            {
+                                label: `Marks`,
+                                data: semesterMarks,
+                                backgroundColor: semesterMarks.map(
+                                    () => `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 0.5)`
+                                ),
+                                borderColor: semesterMarks.map(
+                                    () => `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 1)`
+                                ),
+                                borderWidth: 2,
+                            },
+                        ],
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                        },
+                    },
+                });
+
+                charts.push(chart);
+            });
+        };
+
+        (async () => {
+            const allMarksData = await fetchAndProcessData('data.xlsx');
+            const sgpaExcelData = await fetchAndProcessData('SGPA.xlsx');
+
+            const students = extractStudents(allMarksData);
+            const sgpaStudents = extractSGPAData(sgpaExcelData);
+
+            if (!Object.keys(students).length || !Object.keys(sgpaStudents).length) return;
+
+            populateSelector(students);
+
+            studentSelector.addEventListener('change', () => {
+                const selectedUSN = studentSelector.value;
+                if (selectedUSN) {
+                    const { marks, subjects, name } = students[selectedUSN];
+                    const { sgpaData, labels } = sgpaStudents[selectedUSN];
+
+                    charts.forEach(chart => chart.destroy());
+                    charts = [];
+                    chartsContainer.innerHTML = '';
+
+                    renderSGPAChart(sgpaData, labels, name);
+                    renderCharts(marks, subjects, name);
+                }
+            });
+
+            const firstStudentUSN = Object.keys(students)[0];
+            studentSelector.value = firstStudentUSN;
+
+            const { marks, subjects, name } = students[firstStudentUSN];
+            const { sgpaData, labels } = sgpaStudents[firstStudentUSN];
+
+            renderSGPAChart(sgpaData, labels, name);
+            renderCharts(marks, subjects, name);
+        })();
+    </script>
+</body>
+</html>
